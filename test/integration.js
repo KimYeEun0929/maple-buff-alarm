@@ -23,6 +23,7 @@ const store = require('../src/main/store');
 const TimerCore = require('../src/main/timer-core');
 const Notifier = require('../src/main/notifier');
 const HotkeyHook = require('../src/main/hotkey-hook');
+const ChatGuard = require('../src/main/chat-guard');
 const { makeHotkey } = require('../src/main/hotkey-match');
 
 let passed = 0;
@@ -211,6 +212,39 @@ async function run() {
       { type: 'buff', payload: 'buff-ifrit' },
       { type: 'app', payload: 'resetAll' },
     ]);
+  });
+
+  await check('채팅을 치면 글자 키 버프는 안 걸리고 F키 버프는 걸린다 (후킹 전체 경로)', async () => {
+    const guard = new ChatGuard(() => ({ enabled: true, idleTimeoutSec: 8 }));
+    const h = new HotkeyHook({ guard });
+    h.setBindings([
+      { hotkey: makeHotkey({ keycode: 30 }), type: 'buff', payload: 'buff-on-A' },
+      { hotkey: makeHotkey({ keycode: 61 }), type: 'buff', payload: 'buff-on-F3' },
+    ]);
+
+    const fired = [];
+    h.on('trigger', (hit) => fired.push(hit.payload));
+
+    const tap = async (keycode) => {
+      h.onKeyDown({ keycode });
+      h.onKeyUp({ keycode });
+      await wait(320); // 키 반복 억제(300ms)를 넘긴다
+    };
+
+    await tap(28); // Enter — 채팅창 열기
+    assert.ok(guard.chatting);
+
+    await tap(30); // "a" 를 침
+    assert.deepStrictEqual(fired, [], '채팅 중 글자 키는 버프가 아니다');
+
+    await tap(61); // F3 — 채팅창에 글자를 남기지 않는 키
+    assert.deepStrictEqual(fired, ['buff-on-F3'], 'F키 버프는 채팅 중에도 살아 있어야 한다');
+
+    await tap(57419); // ← 이동. 채팅 중일 수 없는 입력
+    assert.ok(!guard.chatting, '사냥을 재개하는 순간 채팅 상태가 풀린다');
+
+    await tap(30);
+    assert.deepStrictEqual(fired, ['buff-on-F3', 'buff-on-A'], '이제 A 는 다시 버프 키');
   });
 
   console.log(`\n${passed} passed, ${failures.length} failed`);

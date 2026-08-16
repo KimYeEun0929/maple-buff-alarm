@@ -7,11 +7,16 @@ const store = require('./store');
 const TimerCore = require('./timer-core');
 const Notifier = require('./notifier');
 const HotkeyHook = require('./hotkey-hook');
+const ChatGuard = require('./chat-guard');
 const { findCollisions, describe } = require('./hotkey-match');
 
 const core = new TimerCore();
 const notifier = new Notifier(() => store.getSettings());
-const hook = new HotkeyHook();
+const guard = new ChatGuard(() => {
+  const s = store.getSettings();
+  return { enabled: s.chatDetection, idleTimeoutSec: s.chatIdleTimeoutSec };
+});
+const hook = new HotkeyHook({ guard });
 
 let overlayWin = null;
 let settingsWin = null;
@@ -112,6 +117,7 @@ function activeProfilePayload() {
     buffs: core.snapshot(),
     settings: store.getSettings(),
     muted,
+    guard: guard.state(),
   };
 }
 
@@ -137,6 +143,7 @@ function settingsData() {
     runtime: core.snapshot(),
     hook: hook.state(),
     muted,
+    guard: guard.state(),
     collisions: currentCollisions(),
   };
 }
@@ -174,6 +181,7 @@ const APP_ACTION_LABELS = {
   resetVolatile: '소환수 리셋',
   muteToggle: '음소거',
   toggleOverlay: '오버레이 표시/숨김',
+  detectionToggle: '감지 일시정지/재개',
 };
 
 function describeSignature(entries, collision) {
@@ -271,12 +279,24 @@ function runAppAction(action) {
       pushOverlayState();
       pushSettingsData();
       break;
+    case 'detectionToggle':
+      guard.setManualPause(!guard.manualPause);
+      pushOverlayState();
+      pushSettingsData();
+      break;
     default:
       break;
   }
 }
 
+hook.on('guardChanged', () => {
+  pushOverlayState();
+  pushSettingsData();
+});
+
 core.on('tick', (snapshot) => {
+  // 채팅 상태로 잘못 잡혔을 때 화면 표시가 계속 남아 있으면 안 된다.
+  if (guard.sweep()) pushSettingsData();
   pushOverlayState(snapshot);
   // 설정 창의 "남은시간" 칸도 살아 있어야 시작 버튼이 먹었는지 바로 확인된다.
   // 전체 데이터가 아니라 가벼운 스냅샷만 보낸다.

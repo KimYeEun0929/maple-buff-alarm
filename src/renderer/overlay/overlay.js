@@ -54,7 +54,7 @@ function formatRemain(buff) {
 }
 
 function render(payload) {
-  const { buffs, profileName, settings, muted } = payload;
+  const { buffs, profileName, settings, muted, guard } = payload;
   const overlay = settings.overlay;
 
   root.className =
@@ -67,6 +67,7 @@ function render(payload) {
 
   profileNameEl.textContent = profileName || '캐릭터 없음';
   document.getElementById('muted-mark').hidden = !muted;
+  renderGuardMark(guard);
   preferredVoiceURI = settings.ttsVoiceURI;
 
   const sorted = sortBuffs(buffs);
@@ -104,6 +105,18 @@ function render(payload) {
   }
 
   syncSize();
+}
+
+/** 감지가 멈춰 있는 이유를 화면에 남긴다. 모르면 "왜 알림이 안 오지"가 된다. */
+function renderGuardMark(guard) {
+  const el = document.getElementById('guard-mark');
+  if (!guard || (!guard.chatting && !guard.manualPause)) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.textContent = guard.manualPause ? '감지 정지' : '채팅 중';
+  el.classList.toggle('paused', guard.manualPause);
 }
 
 /** 내용에 맞춰 창을 줄여야 게임 화면을 덜 가린다. */

@@ -15,6 +15,7 @@
       <div class="spacer"></div>
       <span id="hook-badge" class="badge">키 후킹 꺼짐</span>
       <span id="mute-badge" class="badge warn" hidden>음소거</span>
+      <span id="guard-badge" class="badge" hidden></span>
       <button id="reset-volatile" class="ghost" title="맵/채널 이동 후 소환수만 초기화">
         소환수 리셋
       </button>
@@ -121,6 +122,24 @@
             키를 <b>읽기만</b> 합니다. 게임으로 가는 입력을 가로채거나 대신 눌러주지 않습니다.
             후킹이 안 되면 앱을 <b>관리자 권한</b>으로 실행해 보세요 —
             게임이 관리자 권한으로 돌고 있으면 그쪽 입력이 보이지 않습니다.
+          </p>
+
+          <label>
+            <input type="checkbox" id="chat-detection" />
+            채팅 중에는 글자 키 감지를 멈추기
+          </label>
+          <label>
+            채팅 자동 해제(초)
+            <input type="number" id="chat-timeout" min="2" max="60" />
+          </label>
+          <p class="hint">
+            엔터를 치면 채팅으로 보고, 글자 키에 걸린 버프를 잠시 무시합니다.
+            게임의 채팅 엔터와 대화상자 <b>확인</b> 엔터는 입력만으로는 구분할 수 없어서,
+            잘못 잡히더라도 <b>이동·점프처럼 채팅 중일 수 없는 입력이 오면 즉시 풀리게</b> 했습니다.
+            위 초는 그래도 안 풀렸을 때의 마지막 안전망입니다.
+            <br />
+            <b>F키·PgUp·Ins</b> 같이 채팅창에 글자를 남기지 않는 키에 걸어둔 버프는
+            채팅 중에도 그대로 동작합니다. 자주 쓰는 버프일수록 이런 키에 두는 게 안전합니다.
           </p>
           <table class="grid" id="app-hotkey-table">
             <thead>

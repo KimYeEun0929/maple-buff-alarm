@@ -125,6 +125,7 @@ const APP_ACTIONS = [
   ['resetVolatile', '소환수 리셋 (맵/채널 이동 후)'],
   ['muteToggle', '음소거 켜기/끄기'],
   ['toggleOverlay', '오버레이 표시/숨김'],
+  ['detectionToggle', '감지 일시정지/재개 (인벤 정리 등 오래 조작할 때)'],
 ];
 
 function renderAppHotkeys() {
@@ -421,6 +422,22 @@ function renderHookState() {
   }
 
   $('#mute-badge').hidden = !data.muted;
+
+  $('#chat-detection').checked = data.settings.chatDetection;
+  $('#chat-timeout').value = data.settings.chatIdleTimeoutSec;
+  $('#chat-timeout').disabled = !data.settings.chatDetection;
+
+  const guard = data.guard || {};
+  const gb = $('#guard-badge');
+  gb.hidden = !guard.chatting && !guard.manualPause;
+  gb.className = 'badge';
+  if (guard.manualPause) {
+    gb.textContent = '감지 정지';
+    gb.classList.add('bad');
+  } else if (guard.chatting) {
+    gb.textContent = '채팅 중 — 글자 키 무시';
+    gb.classList.add('warn');
+  }
 }
 
 /**
@@ -476,6 +493,8 @@ function renderPrefsOutputs() {
 }
 
 bindPref('#hook-enabled', () => $('#hook-enabled').checked, (v) => ({ hotkeyHookEnabled: v }));
+bindPref('#chat-detection', () => $('#chat-detection').checked, (v) => ({ chatDetection: v }));
+bindPref('#chat-timeout', () => Number($('#chat-timeout').value), (v) => ({ chatIdleTimeoutSec: v }));
 bindPref('#tts-enabled', () => $('#tts-enabled').checked, (v) => ({ ttsEnabled: v }));
 bindPref('#tts-volume', () => Number($('#tts-volume').value), (v) => ({ ttsVolume: v }));
 bindPref('#tts-rate', () => Number($('#tts-rate').value), (v) => ({ ttsRate: v }));

@@ -14,8 +14,9 @@ const { KeyResolver, signature, ESCAPE } = require('./hotkey-match');
  * 입력을 넣는 순간 매크로가 된다.
  */
 class HotkeyHook extends EventEmitter {
-  constructor() {
+  constructor({ guard = null } = {}) {
     super();
+    this.guard = guard;
     this.resolver = new KeyResolver();
     this.bindings = new Map(); // signature -> { type, payload }
     this.status = 'off'; // 'off' | 'running' | 'error'
@@ -111,8 +112,14 @@ class HotkeyHook extends EventEmitter {
       return;
     }
 
+    // 채팅 상태는 등록되지 않은 키(그냥 친 글자)로도 갱신되어야 하므로 먼저 관찰한다.
+    if (this.guard && this.guard.observe(hotkey)) this.emit('guardChanged');
+
     const hit = this.bindings.get(signature(hotkey));
-    if (hit) this.emit('trigger', hit);
+    if (!hit) return;
+    if (this.guard && this.guard.blocks(hotkey, hit)) return;
+
+    this.emit('trigger', hit);
   }
 }
 

@@ -39,9 +39,37 @@ const KEY_LABELS = {
 const MODIFIER_CODES = new Set([29, 3613, 56, 3640, 42, 54, 3675, 3676]);
 
 const ESCAPE = 1;
+const ENTER = 28;
+const NUMPAD_ENTER = 3612;
+
+/**
+ * 채팅창에 실제로 글자를 넣는 키들. 채팅 중 감지를 멈출 대상을 고르는 데 쓴다.
+ * 방향키·F키·PgUp 같은 키는 채팅창에서 글자를 만들지 않으므로 여기 없다.
+ */
+const TYPING_KEYCODES = new Set([
+  // 알파벳
+  16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+  30, 31, 32, 33, 34, 35, 36, 37, 38,
+  44, 45, 46, 47, 48, 49, 50,
+  // 상단 숫자열
+  2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+  // 기호
+  12, 13, 26, 27, 39, 40, 41, 43, 51, 52, 53,
+  // 공백 · 편집
+  57, 14, 15,
+  // 넘패드 (NumLock 켠 상태에서 숫자를 찍는다)
+  71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 55, 3637,
+]);
 
 function isModifier(keycode) {
   return MODIFIER_CODES.has(keycode);
+}
+
+/** 이 입력이 채팅창에 글자를 남길 수 있는가. */
+function isTypingKey(hotkey) {
+  if (!hotkey || hotkey.bareModifier) return false;
+  if (hotkey.ctrl || hotkey.alt) return false; // Ctrl/Alt 조합은 글자를 만들지 않는다
+  return TYPING_KEYCODES.has(hotkey.keycode);
 }
 
 function keyLabel(keycode) {
@@ -163,8 +191,12 @@ function findCollisions(entries) {
 module.exports = {
   KEY_LABELS,
   MODIFIER_CODES,
+  TYPING_KEYCODES,
   ESCAPE,
+  ENTER,
+  NUMPAD_ENTER,
   isModifier,
+  isTypingKey,
   keyLabel,
   signature,
   describe,

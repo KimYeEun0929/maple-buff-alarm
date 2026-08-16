@@ -53,6 +53,21 @@ body {
   color: #6ea8ff;
 }
 
+/* 채팅으로 잘못 잡혀 감지가 멈춘 걸 모르면 원인을 찾을 수 없다. 반드시 보이게 한다. */
+#guard-mark {
+  color: #82b8ff;
+  font-size: 10px;
+  border: 1px solid #2f4d78;
+  border-radius: 999px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+#guard-mark.paused {
+  color: #f08a82;
+  border-color: #7a332e;
+}
+
 /* 음소거인 걸 모르고 사냥하면 알림이 안 오는 이유를 알 수 없다. */
 #muted-mark {
   color: #f2c14e;

@@ -13,6 +13,8 @@ const DEFAULT_SETTINGS = {
   groupWindowSec: 30,
   minAlertGapSec: 5,
   hotkeyHookEnabled: false,
+  chatDetection: true, // 채팅 중에는 글자 키에 걸린 버프를 무시
+  chatIdleTimeoutSec: 8,
   // 기본값을 비워 둔다. 게임에서 거의 모든 키를 쓰기 때문에,
   // 미리 정해둔 조합은 높은 확률로 게임 단축키와 충돌한다.
   appHotkeys: {
@@ -20,6 +22,7 @@ const DEFAULT_SETTINGS = {
     resetVolatile: null,
     muteToggle: null,
     toggleOverlay: null,
+    detectionToggle: null,
   },
   overlay: {
     mode: 'list', // 'list' | 'compact'
