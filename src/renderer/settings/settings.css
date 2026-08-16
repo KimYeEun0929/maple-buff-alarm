@@ -1,0 +1,264 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+  font-size: 13px;
+  color: #e6e9f0;
+  background: #14161c;
+}
+
+/* ---------------------------------------------------------------- header */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: #1b1e26;
+  border-bottom: 1px solid #2a2f3c;
+}
+
+.brand {
+  font-weight: 700;
+  color: #6ea8ff;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.active-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9aa3b8;
+}
+
+/* ------------------------------------------------------------------ tabs */
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  background: #1b1e26;
+  border-bottom: 1px solid #2a2f3c;
+}
+
+.tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #8b93a7;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tabs button.on {
+  color: #e6e9f0;
+  border-bottom-color: #6ea8ff;
+}
+
+main {
+  padding: 16px;
+}
+
+/* --------------------------------------------------------------- widgets */
+
+button {
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 5px;
+  border: 1px solid #39405180;
+  background: #262b36;
+  color: #dfe4ee;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #303747;
+}
+
+button.primary {
+  background: #2f5fd0;
+  border-color: #3d70e8;
+  color: #fff;
+}
+
+button.primary:hover {
+  background: #3a6ee0;
+}
+
+button.danger:hover {
+  background: #6d2a26;
+  border-color: #9b3a34;
+}
+
+button.ghost {
+  background: transparent;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  font-family: inherit;
+  font-size: 12px;
+  background: #11141a;
+  border: 1px solid #333a49;
+  color: #e6e9f0;
+  border-radius: 5px;
+  padding: 5px 7px;
+  width: 100%;
+}
+
+input[type="number"] {
+  text-align: right;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #4f7fe0;
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+  background: #191c24;
+  border: 1px solid #2a2f3c;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.grid th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  color: #8b93a7;
+  padding: 8px 10px;
+  background: #1e222c;
+  border-bottom: 1px solid #2a2f3c;
+}
+
+.grid td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #23283300;
+  vertical-align: middle;
+}
+
+.grid tbody tr:nth-child(even) {
+  background: #1c202a;
+}
+
+.grid tbody tr.active-row {
+  box-shadow: inset 3px 0 0 #6ea8ff;
+}
+
+.cell-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.center {
+  text-align: center;
+}
+
+.remain {
+  font-variant-numeric: tabular-nums;
+  color: #9aa3b8;
+}
+
+.remain.soon {
+  color: #f2c14e;
+}
+
+.remain.expired {
+  color: #e2564d;
+}
+
+.remain.active {
+  color: #45c46a;
+}
+
+/* ----------------------------------------------------------------- misc */
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.editing {
+  color: #9aa3b8;
+}
+
+.hint {
+  margin: 0;
+  color: #7b8399;
+  font-size: 11.5px;
+  line-height: 1.6;
+  flex: 1;
+  min-width: 260px;
+}
+
+.hint.warn {
+  color: #d8a45c;
+}
+
+.empty {
+  color: #7b8399;
+  padding: 14px 4px;
+  display: none;
+}
+
+.empty.show {
+  display: block;
+}
+
+fieldset {
+  border: 1px solid #2a2f3c;
+  border-radius: 6px;
+  padding: 12px 14px 14px;
+  margin: 0 0 14px;
+  background: #191c24;
+}
+
+legend {
+  color: #8b93a7;
+  font-size: 11px;
+  padding: 0 6px;
+}
+
+fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+fieldset label input[type="range"] {
+  width: 200px;
+}
+
+fieldset label input[type="number"] {
+  width: 80px;
+}
+
+fieldset label select {
+  width: 220px;
+}
+
+output {
+  color: #9aa3b8;
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+}

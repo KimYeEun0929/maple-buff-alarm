@@ -1,0 +1,203 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: transparent;
+  overflow: hidden;
+  font-family: "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+  user-select: none;
+  cursor: default;
+}
+
+#root {
+  display: inline-block;
+  min-width: 200px;
+  background: rgba(16, 18, 24, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: #e8eaf0;
+  transform-origin: top left;
+}
+
+#root.hidden {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- header */
+
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: #9aa3b8;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 5px;
+}
+
+#profile-name {
+  font-weight: 700;
+  color: #cfd6e6;
+  white-space: nowrap;
+}
+
+#profile-name::before {
+  content: "◆ ";
+  color: #6ea8ff;
+}
+
+/* 잠금이 풀린 동안에만 드래그 가능하다는 걸 눈에 보이게 알려준다. */
+#drag-hint {
+  display: none;
+  color: #ffb454;
+  font-size: 10px;
+}
+
+#root.unlocked {
+  -webkit-app-region: drag;
+  border-color: rgba(255, 180, 84, 0.55);
+}
+
+#root.unlocked #drag-hint {
+  display: inline;
+}
+
+/* ------------------------------------------------------------------ list */
+
+#buffs {
+  list-style: none;
+}
+
+#empty {
+  display: none;
+  font-size: 11px;
+  color: #7b8399;
+  padding: 2px 0;
+}
+
+#root.is-empty #empty {
+  display: block;
+}
+
+.buff {
+  display: grid;
+  grid-template-columns: 1fr 84px 46px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.buff .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buff .gauge {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+/* 게이지는 width가 아니라 transform만 바꾼다 — 노트북에서 리플로우 비용을 없애기 위해. */
+.buff .gauge > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: #45c46a;
+}
+
+.buff .remain {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #c7cede;
+}
+
+.buff.soon .gauge > i {
+  background: #f2c14e;
+}
+.buff.soon .remain {
+  color: #f2c14e;
+}
+
+.buff.expired .gauge > i {
+  background: #e2564d;
+}
+.buff.expired .remain,
+.buff.expired .name {
+  color: #e2564d;
+}
+
+.buff.idle {
+  opacity: 0.45;
+}
+.buff.idle .remain {
+  color: #7b8399;
+}
+
+.buff.blink {
+  animation: blink 0.8s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    opacity: 0.35;
+  }
+}
+
+/* --------------------------------------------------------------- compact */
+
+#root.mode-compact {
+  padding: 4px 10px;
+}
+
+#root.mode-compact #header {
+  display: inline-flex;
+  border: 0;
+  margin: 0 8px 0 0;
+  padding: 0;
+  vertical-align: middle;
+}
+
+#root.mode-compact #buffs {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+#root.mode-compact .buff {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0;
+  font-size: 12px;
+}
+
+#root.mode-compact .buff::after {
+  content: "·";
+  color: #5c6478;
+  margin-left: 4px;
+}
+
+#root.mode-compact .buff:last-child::after {
+  content: "";
+}
+
+#root.mode-compact .buff .gauge {
+  display: none;
+}
+
+#root.mode-compact .buff .remain {
+  text-align: left;
+  width: auto;
+}

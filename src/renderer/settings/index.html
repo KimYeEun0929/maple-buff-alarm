@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>메이플랜드 버프 알람</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">메이플랜드 버프 알람</div>
+      <label class="active-pick">
+        활성 캐릭터
+        <select id="active-profile"></select>
+      </label>
+      <div class="spacer"></div>
+      <button id="reset-volatile" class="ghost" title="맵/채널 이동 후 소환수만 초기화">
+        소환수 리셋
+      </button>
+      <button id="reset-all" class="ghost" title="사망 등으로 버프가 전부 날아갔을 때">
+        전체 리셋
+      </button>
+    </header>
+
+    <nav class="tabs">
+      <button data-tab="chars" class="on">캐릭터</button>
+      <button data-tab="buffs">버프</button>
+      <button data-tab="prefs">설정</button>
+    </nav>
+
+    <main>
+      <!-- ------------------------------------------------------ 캐릭터 -->
+      <section id="tab-chars">
+        <div class="row-actions">
+          <button id="add-profile" class="primary">+ 새 캐릭터</button>
+          <p class="hint">
+            버프 목록은 캐릭터마다 따로 저장됩니다. 비슷한 캐릭터는
+            <b>복제</b> 후 지속시간만 고치는 게 빠릅니다.
+          </p>
+        </div>
+        <table class="grid" id="profile-table">
+          <thead>
+            <tr>
+              <th style="width: 40px"></th>
+              <th>캐릭터 이름</th>
+              <th style="width: 160px">직업 (라벨)</th>
+              <th style="width: 90px">버프 수</th>
+              <th style="width: 170px"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="empty" id="profile-empty">등록된 캐릭터가 없습니다. 새 캐릭터를 추가하세요.</p>
+      </section>
+
+      <!-- --------------------------------------------------------- 버프 -->
+      <section id="tab-buffs" hidden>
+        <div class="row-actions">
+          <button id="add-buff" class="primary">+ 버프 추가</button>
+          <span class="editing">편집 중: <b id="editing-name">-</b></span>
+          <p class="hint">
+            단축키 등록은 M2에서 추가됩니다. 지금은 <b>시작</b> 버튼으로 타이머를 겁니다.
+          </p>
+        </div>
+        <table class="grid" id="buff-table">
+          <thead>
+            <tr>
+              <th>버프 이름</th>
+              <th style="width: 110px">지속시간(초)</th>
+              <th style="width: 110px">사전알림(초)</th>
+              <th style="width: 70px" title="맵 이동·사망 시 사라지는 버프">소환수</th>
+              <th style="width: 60px">사용</th>
+              <th style="width: 90px">남은시간</th>
+              <th style="width: 190px"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="empty" id="buff-empty">버프가 없습니다. 이름과 지속시간을 직접 입력해 추가하세요.</p>
+        <datalist id="known-names"></datalist>
+      </section>
+
+      <!-- --------------------------------------------------------- 설정 -->
+      <section id="tab-prefs" hidden>
+        <fieldset>
+          <legend>음성 알림</legend>
+          <label><input type="checkbox" id="tts-enabled" /> 음성 알림 사용</label>
+          <label>음량 <input type="range" id="tts-volume" min="0" max="1" step="0.05" /><output id="tts-volume-out"></output></label>
+          <label>속도 <input type="range" id="tts-rate" min="0.5" max="2" step="0.05" /><output id="tts-rate-out"></output></label>
+          <label>최소 알림 간격(초) <input type="number" id="min-gap" min="0" max="60" /></label>
+          <p class="hint">
+            같은 순간에 여러 버프가 끝나면 하나로 합쳐 한 번만 말합니다.
+            넷 이상이면 이름 대신 "리버프"라고 알립니다.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>오버레이</legend>
+          <label><input type="checkbox" id="ov-visible" /> 오버레이 표시</label>
+          <label>
+            <input type="checkbox" id="ov-locked" />
+            잠금 (클릭이 게임으로 통과 — 해제하면 드래그로 이동 가능)
+          </label>
+          <label>표시 모드
+            <select id="ov-mode">
+              <option value="list">리스트 (게이지 포함)</option>
+              <option value="compact">컴팩트 (가로 한 줄)</option>
+            </select>
+          </label>
+          <label>투명도 <input type="range" id="ov-opacity" min="0.2" max="1" step="0.02" /><output id="ov-opacity-out"></output></label>
+          <label>크기 <input type="range" id="ov-scale" min="0.7" max="2" step="0.05" /><output id="ov-scale-out"></output></label>
+          <p class="hint">
+            노트북 단일 화면에서는 <b>컴팩트</b> 모드가 게임 UI를 덜 가립니다.
+            위치를 옮기려면 잠금을 풀고 오버레이를 드래그한 뒤 다시 잠그세요.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>주의</legend>
+          <p class="hint warn">
+            이 앱은 키 입력을 <b>읽기만</b> 하고 알려줍니다. 게임에 입력을 넣는 자동 재버프는
+            매크로에 해당하며, 구현되어 있지 않고 앞으로도 넣지 않습니다.
+          </p>
+        </fieldset>
+      </section>
+    </main>
+
+    <script src="settings.js"></script>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "maple-buff-alarm",
+  "version": "0.1.0",
+  "description": "메이플랜드 버프 지속시간 알람 (오버레이 + 음성)",
+  "main": "src/main/index.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "test:integration": "electron test/integration.js",
+    "dist": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.mapleland.buffalarm",
+    "productName": "MapleBuffAlarm",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    }
+  }
+}
