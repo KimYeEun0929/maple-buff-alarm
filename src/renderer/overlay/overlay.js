@@ -54,7 +54,7 @@ function formatRemain(buff) {
 }
 
 function render(payload) {
-  const { buffs, profileName, settings } = payload;
+  const { buffs, profileName, settings, muted } = payload;
   const overlay = settings.overlay;
 
   root.className =
@@ -66,6 +66,7 @@ function render(payload) {
   root.style.transform = `scale(${overlay.scale})`;
 
   profileNameEl.textContent = profileName || '캐릭터 없음';
+  document.getElementById('muted-mark').hidden = !muted;
   preferredVoiceURI = settings.ttsVoiceURI;
 
   const sorted = sortBuffs(buffs);

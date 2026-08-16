@@ -53,6 +53,15 @@ body {
   color: #6ea8ff;
 }
 
+/* 음소거인 걸 모르고 사냥하면 알림이 안 오는 이유를 알 수 없다. */
+#muted-mark {
+  color: #f2c14e;
+  font-size: 10px;
+  border: 1px solid #6d5622;
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
 /* 잠금이 풀린 동안에만 드래그 가능하다는 걸 눈에 보이게 알려준다. */
 #drag-hint {
   display: none;

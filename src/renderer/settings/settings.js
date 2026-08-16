@@ -33,11 +33,116 @@ function apply(next) {
   renderHeader();
   renderPrefs();
   renderNameList();
+  renderCollisions();
+  renderAppHotkeys();
   if (rebuild) {
     renderProfileTable();
     renderBuffTable();
+  } else {
+    refreshHotkeyLabels();
   }
   renderRuntime();
+}
+
+// ------------------------------------------------------------ 단축키 등록
+
+/**
+ * 키 캡처는 후킹 스트림에서 받는다. 설정 창 DOM 이벤트로 받으면
+ * 실제 후킹이 쓰는 keycode 와 다른 값이 되어 게임에서 안 먹는다.
+ */
+async function captureInto(btn, onCaptured) {
+  const original = btn.textContent;
+  btn.textContent = '키를 누르세요…';
+  btn.classList.add('capturing');
+  try {
+    const res = await window.api.captureHotkey();
+    if (res.error) {
+      alert(res.error);
+      return;
+    }
+    if (res.hotkey) await onCaptured(res.hotkey);
+  } finally {
+    btn.textContent = original;
+    btn.classList.remove('capturing');
+  }
+}
+
+/** [ 등록된 키 | 등록 | 해제 ] 한 묶음. */
+function hotkeyCell(hotkey, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'hotkey-cell';
+
+  const label = document.createElement('code');
+  label.className = 'hotkey-label';
+  label.textContent = hotkey ? hotkey.label : '미등록';
+  if (!hotkey) label.classList.add('none');
+
+  const set = button('등록', () =>
+    captureInto(set, async (hk) => {
+      label.textContent = hk.label;
+      label.classList.remove('none');
+      await onChange(hk);
+    })
+  );
+
+  const clear = button('해제', async () => {
+    label.textContent = '미등록';
+    label.classList.add('none');
+    await onChange(null);
+  });
+
+  wrap.append(label, set, clear);
+  return wrap;
+}
+
+/** 표를 다시 그리지 않는 갱신 경로에서도 라벨은 최신으로 맞춘다. */
+function refreshHotkeyLabels() {
+  const profile = activeProfile();
+  if (!profile) return;
+  for (const tr of document.querySelectorAll('#buff-table tbody tr')) {
+    const buff = profile.buffs.find((b) => b.id === tr.dataset.buffId);
+    const label = tr.querySelector('.hotkey-label');
+    if (!buff || !label) continue;
+    label.textContent = buff.hotkey ? buff.hotkey.label : '미등록';
+    label.classList.toggle('none', !buff.hotkey);
+  }
+}
+
+function renderCollisions() {
+  const box = $('#collisions');
+  const list = data.collisions || [];
+  box.hidden = list.length === 0;
+  if (list.length === 0) return;
+  box.innerHTML =
+    '<b>같은 키에 두 개 이상이 걸려 있습니다.</b> 하나는 반드시 먹지 않습니다.<br>' +
+    list
+      .map((c) => `<code>${c.label}</code> → ${c.labels.join(' / ')}`)
+      .join('<br>');
+}
+
+const APP_ACTIONS = [
+  ['resetAll', '전체 리셋 (사망 등으로 버프가 다 날아갔을 때)'],
+  ['resetVolatile', '소환수 리셋 (맵/채널 이동 후)'],
+  ['muteToggle', '음소거 켜기/끄기'],
+  ['toggleOverlay', '오버레이 표시/숨김'],
+];
+
+function renderAppHotkeys() {
+  const tbody = $('#app-hotkey-table tbody');
+  tbody.innerHTML = '';
+  for (const [action, label] of APP_ACTIONS) {
+    const tr = document.createElement('tr');
+    const nameTd = document.createElement('td');
+    nameTd.textContent = label;
+    const keyTd = document.createElement('td');
+    keyTd.appendChild(
+      hotkeyCell(data.settings.appHotkeys[action], async (hk) =>
+        apply(await window.api.saveSettings({ appHotkeys: { [action]: hk } }))
+      )
+    );
+    tr.append(nameTd, keyTd);
+    tbody.appendChild(tr);
+  }
 }
 
 // ------------------------------------------------------------ 헤더/탭
@@ -114,6 +219,11 @@ function renderProfileTable() {
     countTd.className = 'center';
     countTd.textContent = `${profile.buffs.length}개`;
 
+    const switchTd = document.createElement('td');
+    switchTd.appendChild(
+      hotkeyCell(profile.switchHotkey, (hk) => saveProfileField(profile, 'switchHotkey', hk))
+    );
+
     const actions = document.createElement('td');
     actions.className = 'cell-actions';
     actions.append(
@@ -124,7 +234,7 @@ function renderProfileTable() {
       }, 'danger')
     );
 
-    tr.append(pick, nameTd, jobTd, countTd, actions);
+    tr.append(pick, nameTd, jobTd, countTd, switchTd, actions);
     tbody.appendChild(tr);
   }
 }
@@ -186,6 +296,11 @@ function renderBuffTable() {
       numberField(buff.preNoticeSec, 0, 120, (v) => saveBuffField(profile, buff, 'preNoticeSec', v))
     );
 
+    const hotkeyTd = document.createElement('td');
+    hotkeyTd.appendChild(
+      hotkeyCell(buff.hotkey, (hk) => saveBuffField(profile, buff, 'hotkey', hk))
+    );
+
     const volTd = document.createElement('td');
     volTd.className = 'center';
     volTd.appendChild(checkbox(buff.volatile, (v) => saveBuffField(profile, buff, 'volatile', v)));
@@ -210,7 +325,7 @@ function renderBuffTable() {
       }, 'danger')
     );
 
-    tr.append(nameTd, durTd, preTd, volTd, onTd, remainTd, actions);
+    tr.append(nameTd, durTd, preTd, hotkeyTd, volTd, onTd, remainTd, actions);
     tbody.appendChild(tr);
   }
 }
@@ -268,11 +383,44 @@ function renderPrefs() {
   setRange('#tts-pitch', '#tts-pitch-out', s.ttsPitch, (v) => v.toFixed(2));
   $('#min-gap').value = s.minAlertGapSec;
 
+  renderHookState();
+
   $('#ov-visible').checked = s.overlay.visible;
   $('#ov-locked').checked = s.overlay.locked;
   $('#ov-mode').value = s.overlay.mode;
   setRange('#ov-opacity', '#ov-opacity-out', s.overlay.opacity, (v) => v.toFixed(2));
   setRange('#ov-scale', '#ov-scale-out', s.overlay.scale, (v) => `${v.toFixed(2)}x`);
+}
+
+function renderHookState() {
+  const { status, error } = data.hook || { status: 'off' };
+  $('#hook-enabled').checked = data.settings.hotkeyHookEnabled;
+
+  const badge = $('#hook-badge');
+  badge.className = 'badge';
+  if (status === 'running') {
+    badge.textContent = '키 후킹 작동 중';
+    badge.classList.add('ok');
+  } else if (status === 'error') {
+    badge.textContent = '키 후킹 실패';
+    badge.classList.add('bad');
+  } else {
+    badge.textContent = '키 후킹 꺼짐';
+  }
+
+  const hint = $('#hook-status');
+  if (status === 'error') {
+    hint.textContent = `후킹을 시작하지 못했습니다: ${error}`;
+    hint.classList.add('warn');
+  } else if (status === 'running') {
+    hint.textContent = '작동 중입니다. 게임에서 스킬 키를 누르면 타이머가 자동으로 시작됩니다.';
+    hint.classList.remove('warn');
+  } else {
+    hint.textContent = '꺼져 있습니다. 버프 탭의 시작 버튼으로 수동 조작할 수 있습니다.';
+    hint.classList.remove('warn');
+  }
+
+  $('#mute-badge').hidden = !data.muted;
 }
 
 /**
@@ -327,6 +475,7 @@ function renderPrefsOutputs() {
   $('#ov-scale-out').textContent = `${Number($('#ov-scale').value).toFixed(2)}x`;
 }
 
+bindPref('#hook-enabled', () => $('#hook-enabled').checked, (v) => ({ hotkeyHookEnabled: v }));
 bindPref('#tts-enabled', () => $('#tts-enabled').checked, (v) => ({ ttsEnabled: v }));
 bindPref('#tts-volume', () => Number($('#tts-volume').value), (v) => ({ ttsVolume: v }));
 bindPref('#tts-rate', () => Number($('#tts-rate').value), (v) => ({ ttsRate: v }));

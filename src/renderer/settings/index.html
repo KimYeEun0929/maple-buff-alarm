@@ -13,6 +13,8 @@
         <select id="active-profile"></select>
       </label>
       <div class="spacer"></div>
+      <span id="hook-badge" class="badge">키 후킹 꺼짐</span>
+      <span id="mute-badge" class="badge warn" hidden>음소거</span>
       <button id="reset-volatile" class="ghost" title="맵/채널 이동 후 소환수만 초기화">
         소환수 리셋
       </button>
@@ -42,9 +44,10 @@
             <tr>
               <th style="width: 40px"></th>
               <th>캐릭터 이름</th>
-              <th style="width: 160px">직업 (라벨)</th>
-              <th style="width: 90px">버프 수</th>
-              <th style="width: 170px"></th>
+              <th style="width: 140px">직업 (라벨)</th>
+              <th style="width: 70px">버프</th>
+              <th style="width: 210px" title="게임 중 이 캐릭터로 전환하는 키">전환 단축키</th>
+              <th style="width: 130px"></th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -58,19 +61,22 @@
           <button id="add-buff" class="primary">+ 버프 추가</button>
           <span class="editing">편집 중: <b id="editing-name">-</b></span>
           <p class="hint">
-            단축키 등록은 M2에서 추가됩니다. 지금은 <b>시작</b> 버튼으로 타이머를 겁니다.
+            단축키는 <b>게임에서 그 버프를 쓸 때 누르는 키</b>와 똑같이 등록하세요.
+            등록 버튼을 누른 뒤 실제로 키를 누르면 됩니다 (Esc = 취소).
           </p>
         </div>
+        <div id="collisions" class="banner" hidden></div>
         <table class="grid" id="buff-table">
           <thead>
             <tr>
               <th>버프 이름</th>
-              <th style="width: 110px">지속시간(초)</th>
-              <th style="width: 110px">사전알림(초)</th>
-              <th style="width: 70px" title="맵 이동·사망 시 사라지는 버프">소환수</th>
-              <th style="width: 60px">사용</th>
-              <th style="width: 90px">남은시간</th>
-              <th style="width: 190px"></th>
+              <th style="width: 95px">지속시간(초)</th>
+              <th style="width: 95px">사전알림(초)</th>
+              <th style="width: 200px">단축키</th>
+              <th style="width: 60px" title="맵 이동·사망 시 사라지는 버프">소환수</th>
+              <th style="width: 50px">사용</th>
+              <th style="width: 80px">남은시간</th>
+              <th style="width: 170px"></th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -102,6 +108,29 @@
             <b>설정 → 시간 및 언어 → 음성 → 음성 추가</b>에서 한국어를 설치하세요.
             <b>(온라인)</b> 표시가 붙은 음성은 인터넷 연결이 필요해 사냥 중 끊길 수 있습니다.
           </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>전역 키 후킹</legend>
+          <label>
+            <input type="checkbox" id="hook-enabled" />
+            게임에서 스킬 키를 누르면 타이머를 자동으로 시작
+          </label>
+          <p class="hint" id="hook-status"></p>
+          <p class="hint">
+            키를 <b>읽기만</b> 합니다. 게임으로 가는 입력을 가로채거나 대신 눌러주지 않습니다.
+            후킹이 안 되면 앱을 <b>관리자 권한</b>으로 실행해 보세요 —
+            게임이 관리자 권한으로 돌고 있으면 그쪽 입력이 보이지 않습니다.
+          </p>
+          <table class="grid" id="app-hotkey-table">
+            <thead>
+              <tr>
+                <th>앱 단축키</th>
+                <th style="width: 260px"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </fieldset>
 
         <fieldset>

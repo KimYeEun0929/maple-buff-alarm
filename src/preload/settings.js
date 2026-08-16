@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld('api', {
   saveSettings: (patch) => ipcRenderer.invoke('settings:save', patch),
   testVoice: () => ipcRenderer.send('tts:test'),
 
+  captureHotkey: () => ipcRenderer.invoke('hotkey:capture'),
+  cancelCapture: () => ipcRenderer.send('hotkey:cancelCapture'),
+  appAction: (action) => ipcRenderer.send('app:action', action),
+
   startBuff: (id) => ipcRenderer.send('buff:start', id),
   cancelBuff: (id) => ipcRenderer.send('buff:cancel', id),
   resetAll: () => ipcRenderer.send('buff:resetAll'),

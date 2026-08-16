@@ -12,7 +12,15 @@ const DEFAULT_SETTINGS = {
   ttsVoiceURI: null, // null = 자동 (설치된 한국어 음성 중 첫 번째)
   groupWindowSec: 30,
   minAlertGapSec: 5,
-  hotkeyHookEnabled: false, // M2에서 사용
+  hotkeyHookEnabled: false,
+  // 기본값을 비워 둔다. 게임에서 거의 모든 키를 쓰기 때문에,
+  // 미리 정해둔 조합은 높은 확률로 게임 단축키와 충돌한다.
+  appHotkeys: {
+    resetAll: null,
+    resetVolatile: null,
+    muteToggle: null,
+    toggleOverlay: null,
+  },
   overlay: {
     mode: 'list', // 'list' | 'compact'
     visible: true,
@@ -35,13 +43,17 @@ function getSettings() {
   return {
     ...DEFAULT_SETTINGS,
     ...saved,
+    appHotkeys: { ...DEFAULT_SETTINGS.appHotkeys, ...(saved.appHotkeys || {}) },
     overlay: { ...DEFAULT_SETTINGS.overlay, ...(saved.overlay || {}) },
   };
 }
 
 function setSettings(patch) {
-  const next = { ...getSettings(), ...patch };
-  if (patch.overlay) next.overlay = { ...getSettings().overlay, ...patch.overlay };
+  const current = getSettings();
+  const next = { ...current, ...patch };
+  // 중첩 객체는 통째로 덮어쓰지 않고 병합한다 — 한 키만 바꿔도 나머지가 사라지면 안 된다.
+  if (patch.overlay) next.overlay = { ...current.overlay, ...patch.overlay };
+  if (patch.appHotkeys) next.appHotkeys = { ...current.appHotkeys, ...patch.appHotkeys };
   store.set('settings', next);
   return next;
 }
@@ -69,7 +81,13 @@ function saveProfile(profile) {
 }
 
 function createProfile({ name, job }) {
-  const profile = { id: randomUUID(), name: name || '새 캐릭터', job: job || '', buffs: [] };
+  const profile = {
+    id: randomUUID(),
+    name: name || '새 캐릭터',
+    job: job || '',
+    switchHotkey: null, // 게임 중 이 캐릭터로 전환하는 키
+    buffs: [],
+  };
   saveProfile(profile);
   return profile;
 }
@@ -85,6 +103,8 @@ function duplicateProfile(id) {
     id: randomUUID(),
     name: `${src.name} 사본`,
     job: src.job,
+    // 전환 단축키는 물려받지 않는다 — 같은 키에 두 캐릭터가 걸리면 하나는 안 먹는다.
+    switchHotkey: null,
     buffs: src.buffs.map((b) => ({ ...b, id: randomUUID() })),
   };
   saveProfile(copy);

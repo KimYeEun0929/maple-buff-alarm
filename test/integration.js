@@ -22,6 +22,8 @@ app.setPath('userData', tmpDir);
 const store = require('../src/main/store');
 const TimerCore = require('../src/main/timer-core');
 const Notifier = require('../src/main/notifier');
+const HotkeyHook = require('../src/main/hotkey-hook');
+const { makeHotkey } = require('../src/main/hotkey-match');
 
 let passed = 0;
 const failures = [];
@@ -85,6 +87,32 @@ async function run() {
     assert.notStrictEqual(copy.id, profile.id);
     assert.notStrictEqual(copy.buffs[0].id, profile.buffs[0].id, 'id 가 겹치면 타이머가 충돌한다');
     store.deleteProfile(copy.id);
+  });
+
+  await check('복제해도 전환 단축키는 물려받지 않는다', () => {
+    profile.switchHotkey = makeHotkey({ keycode: 3657 }); // PgUp
+    store.saveProfile(profile);
+
+    const copy = store.duplicateProfile(profile.id);
+    assert.strictEqual(copy.switchHotkey, null, '같은 키에 두 캐릭터가 걸리면 하나는 안 먹는다');
+    assert.ok(store.getProfile(profile.id).switchHotkey, '원본은 유지되어야 한다');
+
+    store.deleteProfile(copy.id);
+    profile.switchHotkey = null;
+    store.saveProfile(profile);
+  });
+
+  await check('앱 단축키는 한 개만 바꿔도 나머지가 남는다', () => {
+    const hk = makeHotkey({ keycode: 30, ctrl: true, alt: true }); // Ctrl+Alt+A
+    store.setSettings({ appHotkeys: { resetAll: hk } });
+    store.setSettings({ appHotkeys: { muteToggle: makeHotkey({ keycode: 48 }) } });
+
+    const saved = store.getSettings().appHotkeys;
+    assert.strictEqual(saved.resetAll.label, 'Ctrl+Alt+A', '먼저 넣은 키가 사라지면 안 된다');
+    assert.strictEqual(saved.muteToggle.label, 'B');
+    assert.strictEqual(saved.toggleOverlay, null);
+
+    store.setSettings({ appHotkeys: { resetAll: null, muteToggle: null } });
   });
 
   await check('자동완성 목록은 모든 캐릭터의 버프 이름을 모아 중복을 없앤다', () => {
@@ -155,6 +183,34 @@ async function run() {
     assert.deepStrictEqual(spoken, ['아기용의 이유식 만료']);
     assert.strictEqual(core.snapshot()[0].phase, 'EXPIRED');
     store.setSettings({ minAlertGapSec: 5 });
+  });
+
+  await check('후킹이 꺼져 있으면 단축키 캡처는 이유를 붙여 거절한다', async () => {
+    const h = new HotkeyHook();
+    await assert.rejects(() => h.capture(), /키 후킹이 켜져 있어야/);
+  });
+
+  await check('등록된 키가 눌리면 무엇을 해야 하는지 알려준다', () => {
+    const h = new HotkeyHook();
+    h.setBindings([
+      { hotkey: makeHotkey({ keycode: 3657 }), type: 'buff', payload: 'buff-ifrit' },
+      { hotkey: makeHotkey({ keycode: 42, bareModifier: true }), type: 'app', payload: 'resetAll' },
+    ]);
+
+    const fired = [];
+    h.on('trigger', (hit) => fired.push(hit));
+
+    h.onKeyDown({ keycode: 3657 }); // PgUp 누름 → 버프 발동
+    h.onKeyUp({ keycode: 3657 });
+    h.onKeyDown({ keycode: 42 }); // Shift 누름 — 아직 확정 아님
+    h.onKeyUp({ keycode: 42 }); // Shift 뗌 — 단독 발동
+    h.onKeyDown({ keycode: 48 }); // 등록되지 않은 키
+    h.onKeyUp({ keycode: 48 });
+
+    assert.deepStrictEqual(fired, [
+      { type: 'buff', payload: 'buff-ifrit' },
+      { type: 'app', payload: 'resetAll' },
+    ]);
   });
 
   console.log(`\n${passed} passed, ${failures.length} failed`);

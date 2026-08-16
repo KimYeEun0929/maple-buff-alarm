@@ -11,7 +11,8 @@
     "dist": "electron-builder --win portable"
   },
   "dependencies": {
-    "electron-store": "^8.2.0"
+    "electron-store": "^8.2.0",
+    "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -23,6 +24,10 @@
     "files": [
       "src/**/*",
       "package.json"
+    ],
+    "//": "네이티브 모듈은 asar 안에서 로드되지 않으므로 풀어서 넣는다.",
+    "asarUnpack": [
+      "**/node_modules/uiohook-napi/**"
     ],
     "win": {
       "target": "portable"
