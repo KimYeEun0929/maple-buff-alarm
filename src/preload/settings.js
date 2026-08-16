@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
 
   newBuff: () => ipcRenderer.invoke('buff:new'),
   saveSettings: (patch) => ipcRenderer.invoke('settings:save', patch),
+  testVoice: () => ipcRenderer.send('tts:test'),
 
   startBuff: (id) => ipcRenderer.send('buff:start', id),
   cancelBuff: (id) => ipcRenderer.send('buff:cancel', id),

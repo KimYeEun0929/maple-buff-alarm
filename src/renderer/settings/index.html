@@ -84,12 +84,23 @@
         <fieldset>
           <legend>음성 알림</legend>
           <label><input type="checkbox" id="tts-enabled" /> 음성 알림 사용</label>
+          <label>
+            음성
+            <select id="tts-voice"></select>
+            <button id="tts-test" type="button">테스트 재생</button>
+          </label>
           <label>음량 <input type="range" id="tts-volume" min="0" max="1" step="0.05" /><output id="tts-volume-out"></output></label>
           <label>속도 <input type="range" id="tts-rate" min="0.5" max="2" step="0.05" /><output id="tts-rate-out"></output></label>
+          <label>높낮이 <input type="range" id="tts-pitch" min="0" max="2" step="0.05" /><output id="tts-pitch-out"></output></label>
           <label>최소 알림 간격(초) <input type="number" id="min-gap" min="0" max="60" /></label>
           <p class="hint">
             같은 순간에 여러 버프가 끝나면 하나로 합쳐 한 번만 말합니다.
             넷 이상이면 이름 대신 "리버프"라고 알립니다.
+          </p>
+          <p class="hint" id="voice-hint">
+            음성 목록은 Windows에 설치된 것을 그대로 씁니다. 한국어 음성이 없으면
+            <b>설정 → 시간 및 언어 → 음성 → 음성 추가</b>에서 한국어를 설치하세요.
+            <b>(온라인)</b> 표시가 붙은 음성은 인터넷 연결이 필요해 사냥 중 끊길 수 있습니다.
           </p>
         </fieldset>
 

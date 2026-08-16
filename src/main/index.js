@@ -13,6 +13,9 @@ const notifier = new Notifier(() => store.getSettings());
 let overlayWin = null;
 let settingsWin = null;
 
+// 오버레이 렌더러가 보고한 음성 목록. 설정 창 드롭다운에 쓴다.
+let availableVoices = [];
+
 // ---------------------------------------------------------------- windows
 
 function createOverlay() {
@@ -123,8 +126,21 @@ function settingsData() {
     settings: store.getSettings(),
     activeProfileId: store.getActiveProfile()?.id || null,
     knownBuffNames: store.knownBuffNames(),
+    voices: availableVoices,
     runtime: core.snapshot(),
   };
+}
+
+/** 설정 창이 없어도(닫혔다 열려도) 목록이 유지되도록 메인에 들고 있는다. */
+function speakOnOverlay(text) {
+  if (!overlayWin || overlayWin.isDestroyed()) return;
+  const s = store.getSettings();
+  overlayWin.webContents.send('overlay:announce', {
+    text,
+    volume: s.ttsVolume,
+    rate: s.ttsRate,
+    pitch: s.ttsPitch,
+  });
 }
 
 /** 활성 프로필의 버프를 타이머 코어에 다시 싣는다. 실행 중이던 타이머는 초기화된다. */
@@ -151,15 +167,7 @@ core.on('due', (items) => {
   notifier.enqueue(items);
 });
 
-notifier.on('announce', ({ text }) => {
-  if (!overlayWin || overlayWin.isDestroyed()) return;
-  const s = store.getSettings();
-  overlayWin.webContents.send('overlay:announce', {
-    text,
-    volume: s.ttsVolume,
-    rate: s.ttsRate,
-  });
-});
+notifier.on('announce', ({ text }) => speakOnOverlay(text));
 
 // -------------------------------------------------------------------- IPC
 
@@ -209,6 +217,14 @@ ipcMain.handle('settings:save', (_e, patch) => {
   pushSettingsData();
   return settingsData();
 });
+
+ipcMain.on('tts:voices', (_e, voices) => {
+  availableVoices = Array.isArray(voices) ? voices : [];
+  pushSettingsData();
+});
+
+// 음성을 고를 때 바로 들어보라고. 음성 알림이 꺼져 있어도 테스트는 재생한다.
+ipcMain.on('tts:test', () => speakOnOverlay('이프리트, 소울애로우'));
 
 ipcMain.on('buff:start', (_e, id) => core.startBuff(id));
 ipcMain.on('buff:cancel', (_e, id) => core.cancelBuff(id));

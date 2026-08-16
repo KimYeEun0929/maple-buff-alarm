@@ -45,6 +45,15 @@ async function run() {
     assert.strictEqual(s.overlay.mode, 'list');
     assert.strictEqual(s.minAlertGapSec, 5);
     assert.strictEqual(typeof s.overlay.locked, 'boolean');
+    assert.strictEqual(s.ttsVoiceURI, null, '음성 미지정이 기본값이어야 자동 선택으로 동작한다');
+    assert.strictEqual(s.ttsPitch, 1.0);
+  });
+
+  await check('음성 선택은 저장되고, 해제하면 자동으로 돌아간다', () => {
+    store.setSettings({ ttsVoiceURI: 'urn:voice:heami' });
+    assert.strictEqual(store.getSettings().ttsVoiceURI, 'urn:voice:heami');
+    store.setSettings({ ttsVoiceURI: null });
+    assert.strictEqual(store.getSettings().ttsVoiceURI, null);
   });
 
   await check('부분 업데이트가 overlay 하위 키를 지우지 않는다', () => {

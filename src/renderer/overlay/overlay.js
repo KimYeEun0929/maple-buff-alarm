@@ -66,6 +66,7 @@ function render(payload) {
   root.style.transform = `scale(${overlay.scale})`;
 
   profileNameEl.textContent = profileName || '캐릭터 없음';
+  preferredVoiceURI = settings.ttsVoiceURI;
 
   const sorted = sortBuffs(buffs);
   const seen = new Set();
@@ -116,25 +117,53 @@ function syncSize() {
 
 // -------------------------------------------------------------------- TTS
 
-let koVoice = null;
+let voices = [];
+let preferredVoiceURI = null;
 
-function pickVoice() {
-  const voices = window.speechSynthesis.getVoices();
-  koVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ko')) || null;
+/**
+ * 음성 목록은 비동기로 채워진다(처음엔 빈 배열이고 voiceschanged 후에 들어온다).
+ * 목록이 바뀔 때마다 메인으로 올려 설정 창의 드롭다운을 갱신한다.
+ */
+function refreshVoices() {
+  voices = window.speechSynthesis.getVoices();
+  window.overlayApi.reportVoices(
+    voices.map((v) => ({
+      voiceURI: v.voiceURI,
+      name: v.name,
+      lang: v.lang,
+      localService: v.localService,
+    }))
+  );
 }
 
-pickVoice();
-window.speechSynthesis.addEventListener('voiceschanged', pickVoice);
+refreshVoices();
+window.speechSynthesis.addEventListener('voiceschanged', refreshVoices);
 
-function speak({ text, volume, rate }) {
+/** 선택한 음성이 없거나 사라졌으면 한국어 음성으로, 그것도 없으면 브라우저 기본값으로. */
+function resolveVoice() {
+  if (preferredVoiceURI) {
+    const chosen = voices.find((v) => v.voiceURI === preferredVoiceURI);
+    if (chosen) return chosen;
+  }
+  return voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ko')) || null;
+}
+
+function speak({ text, volume, rate, pitch }) {
   if (!text) return;
   // 이전 발화가 남아 있으면 최신 알림이 밀린다. 항상 최신 것을 우선한다.
   window.speechSynthesis.cancel();
+
   const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'ko-KR';
-  if (koVoice) utter.voice = koVoice;
+  const voice = resolveVoice();
+  if (voice) {
+    utter.voice = voice;
+    utter.lang = voice.lang;
+  } else {
+    utter.lang = 'ko-KR';
+  }
   utter.volume = volume;
   utter.rate = rate;
+  utter.pitch = pitch;
   window.speechSynthesis.speak(utter);
 }
 

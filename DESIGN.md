@@ -146,6 +146,10 @@ Shift↓ ... A↓ A↑ ... Shift↑      → Shift+A 조합, Shift 단독은 발
 "이프리트", "소울애로우" 처럼 **버프 이름을 말해주는 음성**이 압도적으로 실용적입니다.
 
 - 구현: Web Speech API (`speechSynthesis`) — Electron 렌더러에서 바로 사용 가능, 추가 의존성 없음
+- **음성 선택**: OS에 설치된 음성 목록에서 고를 수 있고, 음량·속도·높낮이를 조절한다.
+  기본값은 자동(한국어 음성 우선)이며, 고른 음성이 사라지면 자동으로 되돌아간다.
+  음성 목록은 렌더러만 알 수 있으므로 오버레이 렌더러가 메인으로 보고하고,
+  메인이 설정 창에 전달한다.
 - 버프별로 읽어줄 문구를 사용자가 지정 가능 (`tts` 필드). 짧을수록 좋음.
 - 보조: 버프별 구분 가능한 효과음 + 오버레이 게이지 색 변화(초록 → 노랑 → 빨강)
 
@@ -267,8 +271,10 @@ interface BuffState {
 interface Settings {
   activeProfileId: string | null;
   ttsEnabled: boolean;
+  ttsVoiceURI: string | null; // null = 자동 (한국어 음성 우선)
   ttsVolume: number;        // 0.0 ~ 1.0
   ttsRate: number;          // 발화 속도
+  ttsPitch: number;         // 음 높낮이
   soundEnabled: boolean;
   groupWindowSec: number;   // 묶음 알림 합류 윈도우 (기본 30)
   minAlertGapSec: number;   // 최소 알림 간격 (기본 5)

@@ -262,8 +262,10 @@ function renderRuntime() {
 function renderPrefs() {
   const s = data.settings;
   $('#tts-enabled').checked = s.ttsEnabled;
+  renderVoiceList(s.ttsVoiceURI);
   setRange('#tts-volume', '#tts-volume-out', s.ttsVolume, (v) => v.toFixed(2));
   setRange('#tts-rate', '#tts-rate-out', s.ttsRate, (v) => `${v.toFixed(2)}x`);
+  setRange('#tts-pitch', '#tts-pitch-out', s.ttsPitch, (v) => v.toFixed(2));
   $('#min-gap').value = s.minAlertGapSec;
 
   $('#ov-visible').checked = s.overlay.visible;
@@ -272,6 +274,40 @@ function renderPrefs() {
   setRange('#ov-opacity', '#ov-opacity-out', s.overlay.opacity, (v) => v.toFixed(2));
   setRange('#ov-scale', '#ov-scale-out', s.overlay.scale, (v) => `${v.toFixed(2)}x`);
 }
+
+/**
+ * 음성 목록은 오버레이 렌더러가 보고할 때까지 비어 있다.
+ * 한국어 음성을 위로 올려 고르기 쉽게 한다.
+ */
+function renderVoiceList(selectedURI) {
+  const sel = $('#tts-voice');
+  const voices = data.voices || [];
+  sel.innerHTML = '';
+
+  const auto = document.createElement('option');
+  auto.value = '';
+  auto.textContent = '자동 (한국어 음성 우선)';
+  sel.appendChild(auto);
+
+  const isKo = (v) => v.lang && v.lang.toLowerCase().startsWith('ko');
+  const sorted = [...voices].sort((a, b) => {
+    if (isKo(a) !== isKo(b)) return isKo(a) ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  for (const v of sorted) {
+    const opt = document.createElement('option');
+    opt.value = v.voiceURI;
+    opt.textContent = `${v.name} (${v.lang})${v.localService ? '' : ' — 온라인'}`;
+    sel.appendChild(opt);
+  }
+
+  sel.value = selectedURI && sorted.some((v) => v.voiceURI === selectedURI) ? selectedURI : '';
+  sel.disabled = voices.length === 0;
+  $('#voice-hint').hidden = false;
+}
+
+$('#tts-test').addEventListener('click', () => window.api.testVoice());
 
 function setRange(inputSel, outSel, value, fmt) {
   $(inputSel).value = value;
@@ -286,6 +322,7 @@ function bindPref(sel, read, build) {
 function renderPrefsOutputs() {
   $('#tts-volume-out').textContent = Number($('#tts-volume').value).toFixed(2);
   $('#tts-rate-out').textContent = `${Number($('#tts-rate').value).toFixed(2)}x`;
+  $('#tts-pitch-out').textContent = Number($('#tts-pitch').value).toFixed(2);
   $('#ov-opacity-out').textContent = Number($('#ov-opacity').value).toFixed(2);
   $('#ov-scale-out').textContent = `${Number($('#ov-scale').value).toFixed(2)}x`;
 }
@@ -293,6 +330,8 @@ function renderPrefsOutputs() {
 bindPref('#tts-enabled', () => $('#tts-enabled').checked, (v) => ({ ttsEnabled: v }));
 bindPref('#tts-volume', () => Number($('#tts-volume').value), (v) => ({ ttsVolume: v }));
 bindPref('#tts-rate', () => Number($('#tts-rate').value), (v) => ({ ttsRate: v }));
+bindPref('#tts-pitch', () => Number($('#tts-pitch').value), (v) => ({ ttsPitch: v }));
+bindPref('#tts-voice', () => $('#tts-voice').value || null, (v) => ({ ttsVoiceURI: v }));
 bindPref('#min-gap', () => Number($('#min-gap').value), (v) => ({ minAlertGapSec: v }));
 bindPref('#ov-visible', () => $('#ov-visible').checked, (v) => ({ overlay: { visible: v } }));
 bindPref('#ov-locked', () => $('#ov-locked').checked, (v) => ({ overlay: { locked: v } }));

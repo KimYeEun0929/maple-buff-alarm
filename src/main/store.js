@@ -8,6 +8,8 @@ const DEFAULT_SETTINGS = {
   ttsEnabled: true,
   ttsVolume: 1.0,
   ttsRate: 1.0,
+  ttsPitch: 1.0,
+  ttsVoiceURI: null, // null = 자동 (설치된 한국어 음성 중 첫 번째)
   groupWindowSec: 30,
   minAlertGapSec: 5,
   hotkeyHookEnabled: false, // M2에서 사용
