@@ -23,6 +23,7 @@
     "productName": "MapleBuffAlarm",
     "files": [
       "src/**/*",
+      "assets/**/*",
       "package.json"
     ],
     "//": "네이티브 모듈은 asar 안에서 로드되지 않으므로 풀어서 넣는다.",

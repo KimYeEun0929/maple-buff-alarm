@@ -256,6 +256,59 @@ async function run() {
     assert.deepStrictEqual(fired, ['buff-on-F3', 'buff-on-A'], '이제 A 는 다시 버프 키');
   });
 
+  await check('내보낸 설정을 그대로 다시 가져올 수 있다', () => {
+    const p = store.createProfile({ name: '왕복 테스트', job: '도적' });
+    p.switchHotkey = makeHotkey({ keycode: 3666 }); // Ins
+    p.buffs.push({ ...store.createBuff(), name: '헤이스트', durationSec: 300 });
+    store.saveProfile(p);
+    store.setSettings({ ttsRate: 1.35, overlay: { mode: 'compact' } });
+
+    const dump = JSON.parse(JSON.stringify(store.exportData()));
+    store.deleteProfile(p.id);
+    store.setSettings({ ttsRate: 1.0, overlay: { mode: 'list' } });
+
+    const summary = store.importData(dump);
+    const back = store.getProfile(p.id);
+
+    assert.ok(back, '캐릭터가 되살아나야 한다');
+    assert.strictEqual(back.buffs[0].name, '헤이스트');
+    assert.strictEqual(back.switchHotkey.label, 'Ins');
+    assert.strictEqual(store.getSettings().ttsRate, 1.35);
+    assert.strictEqual(store.getSettings().overlay.mode, 'compact');
+    assert.ok(summary.profiles >= 1);
+
+    store.deleteProfile(p.id);
+  });
+
+  await check('손상된 설정 파일을 가져와도 앱이 깨지지 않는다', () => {
+    const before = store.getProfiles().length;
+
+    store.importData({
+      profiles: [
+        { name: '값이 빠진 캐릭터', buffs: [{ name: '이프리트' }] }, // id·지속시간 없음
+        { name: '이상한 값', buffs: [{ name: 'x', durationSec: 'abc', preNoticeSec: -5 }] },
+        null, // 통째로 잘못된 항목
+      ],
+      settings: { ttsVolume: 0.5, activeProfileId: '존재하지-않는-id' },
+    });
+
+    const [a, b] = store.getProfiles();
+    assert.strictEqual(store.getProfiles().length, 2, '잘못된 항목은 버린다');
+    assert.ok(a.id, 'id 를 새로 만들어 준다');
+    assert.strictEqual(a.buffs[0].durationSec, 180, '빠진 값은 기본값으로');
+    assert.strictEqual(b.buffs[0].durationSec, 180, '숫자가 아니면 기본값으로');
+    assert.strictEqual(b.buffs[0].preNoticeSec, 0, '범위를 벗어나면 잘라낸다');
+    assert.strictEqual(store.getSettings().activeProfileId, a.id, '없는 캐릭터를 가리키면 되돌린다');
+    assert.strictEqual(store.getSettings().overlay.mode, 'list', '빠진 설정은 기본값으로 채운다');
+
+    void before;
+  });
+
+  await check('내보내기 형식이 아닌 파일은 이유를 붙여 거절한다', () => {
+    assert.throws(() => store.importData({ hello: 'world' }), /내보낸 설정 파일이 아닙니다/);
+    assert.throws(() => store.importData(null), /내보낸 설정 파일이 아닙니다/);
+  });
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   fs.rmSync(tmpDir, { recursive: true, force: true });
   app.exit(failures.length === 0 ? 0 : 1);

@@ -1,13 +1,15 @@
 'use strict';
 
 const path = require('path');
-const { app, BrowserWindow, ipcMain } = require('electron');
+const fs = require('fs');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 
 const store = require('./store');
 const TimerCore = require('./timer-core');
 const Notifier = require('./notifier');
 const HotkeyHook = require('./hotkey-hook');
 const ChatGuard = require('./chat-guard');
+const AppTray = require('./tray');
 const { findCollisions, describe } = require('./hotkey-match');
 
 const core = new TimerCore();
@@ -20,6 +22,10 @@ const hook = new HotkeyHook({ guard });
 
 let overlayWin = null;
 let settingsWin = null;
+let tray = null;
+
+// 트레이가 앱의 수명을 쥔다. 이 값이 true 일 때만 창을 진짜로 닫는다.
+let isQuitting = false;
 
 // 오버레이 렌더러가 보고한 음성 목록. 설정 창 드롭다운에 쓴다.
 let availableVoices = [];
@@ -99,12 +105,27 @@ function createSettings() {
   settingsWin.setMenuBarVisibility(false);
   settingsWin.loadFile(path.join(__dirname, '..', 'renderer', 'settings', 'index.html'));
 
-  // M1에는 트레이가 없으므로(M3 예정) 설정 창이 앱의 수명을 쥔다.
-  // 게임 중에는 닫지 말고 최소화해 두면 된다.
+  // 창을 닫아도 앱은 트레이에 남는다. 사냥 중에 실수로 닫아 알림이 끊기면 안 된다.
+  settingsWin.on('close', (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+    settingsWin.hide();
+  });
+
   settingsWin.on('closed', () => {
     settingsWin = null;
-    app.quit();
   });
+}
+
+function openSettings() {
+  if (!settingsWin || settingsWin.isDestroyed()) {
+    createSettings();
+    return;
+  }
+  if (!settingsWin.isVisible()) settingsWin.show();
+  if (settingsWin.isMinimized()) settingsWin.restore();
+  settingsWin.focus();
+  pushSettingsData();
 }
 
 // ------------------------------------------------------------ state sync
@@ -129,6 +150,7 @@ function pushOverlayState(snapshot) {
 }
 
 function pushSettingsData() {
+  if (tray) tray.refresh();
   if (!settingsWin || settingsWin.isDestroyed()) return;
   settingsWin.webContents.send('settings:data', settingsData());
 }
@@ -307,7 +329,9 @@ core.on('tick', (snapshot) => {
 
 core.on('due', (items) => {
   if (muted || !store.getSettings().ttsEnabled) return;
-  notifier.enqueue(items);
+  // 곧 끝날 다른 버프도 같이 끌어와 한 번에 알린다. 안 그러면 버프 수만큼 알림이 늘어난다.
+  const window = store.getSettings().groupWindowSec * 1000;
+  notifier.enqueue(window > 0 ? [...items, ...core.pullForward(window)] : items);
 });
 
 notifier.on('announce', ({ text }) => speakOnOverlay(text));
@@ -378,6 +402,44 @@ ipcMain.handle('hotkey:capture', async () => {
 
 ipcMain.on('hotkey:cancelCapture', () => hook.cancelCapture());
 
+ipcMain.handle('data:export', async () => {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const { canceled, filePath } = await dialog.showSaveDialog(settingsWin, {
+    title: '설정 내보내기',
+    defaultPath: `maple-buff-alarm-${stamp}.json`,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (canceled || !filePath) return { canceled: true };
+
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(store.exportData(), null, 2), 'utf8');
+    return { path: filePath };
+  } catch (err) {
+    return { error: `저장하지 못했습니다: ${err.message}` };
+  }
+});
+
+ipcMain.handle('data:import', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(settingsWin, {
+    title: '설정 가져오기',
+    properties: ['openFile'],
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (canceled || filePaths.length === 0) return { canceled: true };
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
+    const summary = store.importData(raw);
+    reloadActiveProfile();
+    syncHookRunning();
+    applyOverlayLock(store.getSettings().overlay.locked);
+    pushOverlayState();
+    return { summary };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
 ipcMain.on('tts:voices', (_e, voices) => {
   availableVoices = Array.isArray(voices) ? voices : [];
   pushSettingsData();
@@ -408,27 +470,47 @@ ipcMain.on('overlay:resize', (_e, { width, height }) => {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (settingsWin) {
-      if (settingsWin.isMinimized()) settingsWin.restore();
-      settingsWin.focus();
-    }
-  });
+  app.on('second-instance', () => openSettings());
 
   app.whenReady().then(() => {
     createOverlay();
     createSettings();
+
+    tray = new AppTray({
+      getState: () => ({
+        profiles: store.getProfiles(),
+        activeProfileId: store.getActiveProfile()?.id || null,
+        muted,
+        guard: guard.state(),
+        overlayVisible: store.getSettings().overlay.visible,
+        hookStatus: hook.status,
+      }),
+      openSettings,
+      selectProfile: (id) => {
+        store.setSettings({ activeProfileId: id });
+        reloadActiveProfile();
+      },
+      runAction: (action) => runAppAction(action),
+      quit: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    });
+    tray.build();
+
     reloadActiveProfile();
     syncHookRunning();
     core.run();
   });
 
-  // M1에는 트레이가 없다(M3 예정). 설정 창을 닫으면 앱이 종료된다.
-  app.on('window-all-closed', () => app.quit());
+  // 트레이에 상주하므로 창을 다 닫아도 종료하지 않는다.
+  app.on('window-all-closed', () => {});
 
   app.on('before-quit', () => {
+    isQuitting = true;
     core.stop();
     notifier.clear();
     hook.stop();
+    if (tray) tray.destroy();
   });
 }

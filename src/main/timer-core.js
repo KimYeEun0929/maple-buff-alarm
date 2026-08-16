@@ -100,6 +100,27 @@ class TimerCore extends EventEmitter {
     this.emitTick();
   }
 
+  /**
+   * 곧 끝날 버프를 미리 끌어와 한 번에 알리기 위한 목록.
+   *
+   * 25초 뒤 끝날 버프를 지금 알려주면 한 번에 재버프할 수 있다. 따로 알리면
+   * 25초 뒤에 또 울려서, 사냥 중 알림 횟수가 버프 수만큼 늘어난다.
+   *
+   * 끌어온 버프는 SOON 으로 올려 사전 알림이 다시 나가지 않게 한다.
+   * 만료 알림은 그대로 남긴다 — 재버프를 안 했다면 그건 여전히 알려줘야 한다.
+   */
+  pullForward(withinMs, now = Date.now()) {
+    const pulled = [];
+    for (const [id, st] of this.states) {
+      if (st.phase !== 'ACTIVE' || st.endsAt === null) continue;
+      if (st.endsAt - now > withinMs) continue;
+      st.phase = 'SOON';
+      const buff = this.buffs.get(id);
+      pulled.push({ id, name: buff.name, tts: buff.tts, kind: 'soon' });
+    }
+    return pulled;
+  }
+
   snapshot() {
     const now = Date.now();
     return [...this.buffs.values()].map((b) => {

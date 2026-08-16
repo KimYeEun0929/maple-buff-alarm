@@ -150,6 +150,67 @@ test('프로필을 다시 실으면 실행 중이던 타이머가 초기화된�
   assert.strictEqual(core.snapshot()[0].phase, 'IDLE');
 });
 
+test('곧 끝날 버프를 끌어와 한 번에 알린다', () => {
+  const core = new TimerCore();
+  core.loadBuffs([
+    buff({ id: 'a', name: '이프리트', durationSec: 100, preNoticeSec: 10 }),
+    buff({ id: 'b', name: '소울애로우', durationSec: 120, preNoticeSec: 10 }),
+    buff({ id: 'c', name: '메디테이션', durationSec: 600, preNoticeSec: 10 }),
+  ]);
+  core.startBuff('a');
+  core.startBuff('b');
+  core.startBuff('c');
+
+  now += 91_000; // a 는 9초 남음(사전 알림 구간), b 는 29초, c 는 509초
+  core.tick();
+
+  const pulled = core.pullForward(30_000);
+  assert.deepStrictEqual(pulled.map((p) => p.name), ['소울애로우'], '30초 안에 끝나는 것만');
+
+  const byId = Object.fromEntries(core.snapshot().map((s) => [s.id, s]));
+  assert.strictEqual(byId.b.phase, 'SOON', '끌어온 버프는 사전 알림을 이미 받은 것으로 처리');
+  assert.strictEqual(byId.c.phase, 'ACTIVE');
+});
+
+test('끌어온 버프는 사전 알림을 두 번 받지 않는다', () => {
+  const core = new TimerCore();
+  const due = collectDue(core);
+  core.loadBuffs([buff({ id: 'b', durationSec: 120, preNoticeSec: 10 })]);
+  core.startBuff('b');
+
+  now += 91_000;
+  core.pullForward(30_000); // 다른 버프와 함께 미리 알림
+
+  now += 20_000; // 남은 9초 — 원래라면 여기서 SOON 이 발생
+  core.tick();
+  assert.deepStrictEqual(due, [], '이미 알렸으므로 다시 알리지 않는다');
+});
+
+test('끌어와 알렸어도 만료 알림은 그대로 나간다', () => {
+  const core = new TimerCore();
+  const due = collectDue(core);
+  core.loadBuffs([buff({ id: 'b', durationSec: 120, preNoticeSec: 10 })]);
+  core.startBuff('b');
+
+  now += 91_000;
+  core.pullForward(30_000);
+
+  now += 30_000; // 만료
+  core.tick();
+  // 재버프를 안 했다면 그건 여전히 알려줘야 한다.
+  assert.deepStrictEqual(due.map((d) => d.kind), ['expired']);
+});
+
+test('이미 알린 버프는 다시 끌어오지 않는다', () => {
+  const core = new TimerCore();
+  core.loadBuffs([buff({ id: 'b', durationSec: 120, preNoticeSec: 10 })]);
+  core.startBuff('b');
+
+  now += 95_000;
+  assert.strictEqual(core.pullForward(30_000).length, 1);
+  assert.strictEqual(core.pullForward(30_000).length, 0, '두 번째 호출에서는 비어야 한다');
+});
+
 test('발화 문구: 개수에 따라 이름 나열 또는 리버프', () => {
   assert.strictEqual(buildText([{ name: '이프리트', kind: 'soon' }]), '이프리트');
   assert.strictEqual(buildText([{ name: '이프리트', kind: 'expired' }]), '이프리트 만료');

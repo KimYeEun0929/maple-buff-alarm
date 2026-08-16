@@ -143,8 +143,88 @@ function knownBuffNames() {
   return [...names].sort();
 }
 
+const EXPORT_VERSION = 1;
+
+function exportData() {
+  return { version: EXPORT_VERSION, profiles: getProfiles(), settings: getSettings() };
+}
+
+const num = (value, fallback, min, max) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+};
+
+/** 손으로 고친 파일이 들어와도 앱이 깨지지 않도록, 모르는 값은 기본값으로 메운다. */
+function sanitizeHotkey(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const keycode = Number(raw.keycode);
+  if (!Number.isInteger(keycode)) return null;
+  return {
+    keycode,
+    ctrl: !!raw.ctrl,
+    alt: !!raw.alt,
+    shift: !!raw.shift,
+    bareModifier: !!raw.bareModifier,
+    label: typeof raw.label === 'string' && raw.label ? raw.label : `키(${keycode})`,
+  };
+}
+
+function sanitizeBuff(raw) {
+  return {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : randomUUID(),
+    name: typeof raw.name === 'string' ? raw.name : '',
+    durationSec: num(raw.durationSec, 180, 1, 7200),
+    hotkey: sanitizeHotkey(raw.hotkey),
+    preNoticeSec: num(raw.preNoticeSec, 10, 0, 120),
+    tts: typeof raw.tts === 'string' ? raw.tts : '',
+    volatile: !!raw.volatile,
+    enabled: raw.enabled !== false,
+  };
+}
+
+function sanitizeProfile(raw) {
+  return {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : randomUUID(),
+    name: typeof raw.name === 'string' && raw.name ? raw.name : '이름 없는 캐릭터',
+    job: typeof raw.job === 'string' ? raw.job : '',
+    switchHotkey: sanitizeHotkey(raw.switchHotkey),
+    buffs: Array.isArray(raw.buffs) ? raw.buffs.filter((b) => b && typeof b === 'object').map(sanitizeBuff) : [],
+  };
+}
+
+/**
+ * 가져오기. 기존 설정을 통째로 대체한다.
+ * @throws 파일이 이 앱의 내보내기 형식이 아닐 때
+ */
+function importData(raw) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.profiles)) {
+    throw new Error('이 앱에서 내보낸 설정 파일이 아닙니다.');
+  }
+
+  const profiles = raw.profiles.filter((p) => p && typeof p === 'object').map(sanitizeProfile);
+  store.set('profiles', profiles);
+
+  const incoming = raw.settings && typeof raw.settings === 'object' ? raw.settings : {};
+  store.set('settings', {
+    ...DEFAULT_SETTINGS,
+    ...incoming,
+    appHotkeys: { ...DEFAULT_SETTINGS.appHotkeys, ...(incoming.appHotkeys || {}) },
+    overlay: { ...DEFAULT_SETTINGS.overlay, ...(incoming.overlay || {}) },
+    // 없어진 캐릭터를 가리키고 있으면 첫 캐릭터로 되돌린다.
+    activeProfileId: profiles.some((p) => p.id === incoming.activeProfileId)
+      ? incoming.activeProfileId
+      : profiles[0]?.id || null,
+  });
+
+  return { profiles: profiles.length, buffs: profiles.reduce((n, p) => n + p.buffs.length, 0) };
+}
+
 module.exports = {
   DEFAULT_SETTINGS,
+  EXPORT_VERSION,
+  exportData,
+  importData,
   getSettings,
   setSettings,
   getProfiles,

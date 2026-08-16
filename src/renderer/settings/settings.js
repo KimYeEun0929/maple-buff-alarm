@@ -474,6 +474,29 @@ function renderVoiceList(selectedURI) {
 
 $('#tts-test').addEventListener('click', () => window.api.testVoice());
 
+// ------------------------------------------------------------ 백업
+
+$('#export-data').addEventListener('click', async () => {
+  const res = await window.api.exportData();
+  if (res.canceled) return;
+  if (res.error) alert(res.error);
+  else alert(`설정을 저장했습니다.\n\n${res.path}`);
+});
+
+$('#import-data').addEventListener('click', async () => {
+  if (!confirm('가져오면 지금의 캐릭터·버프·설정이 전부 대체됩니다. 계속할까요?')) return;
+
+  const res = await window.api.importData();
+  if (res.canceled) return;
+  if (res.error) {
+    alert(`가져오지 못했습니다.\n\n${res.error}`);
+    return;
+  }
+  tableKey = ''; // 내용이 통째로 바뀌었으므로 표를 다시 그린다
+  apply(await window.api.getData());
+  alert(`캐릭터 ${res.summary.profiles}개, 버프 ${res.summary.buffs}개를 가져왔습니다.`);
+});
+
 function setRange(inputSel, outSel, value, fmt) {
   $(inputSel).value = value;
   $(outSel).textContent = fmt(Number(value));
