@@ -117,6 +117,22 @@ test('수식키 판별', () => {
   assert.ok(!isModifier(KEY.PgUp));
 });
 
+test('후킹 실패 원인을 조치 가능한 문장으로 바꾼다', () => {
+  const { explainStartFailure } = require('../src/main/hotkey-hook');
+
+  const missing = new Error("Cannot find module 'uiohook-napi'");
+  missing.code = 'MODULE_NOT_FOUND';
+  assert.match(explainStartFailure(missing), /npm install/, '무엇을 해야 하는지 알려줘야 한다');
+
+  assert.match(
+    explainStartFailure(new Error('No native build was found for platform=win32')),
+    /node_modules/
+  );
+
+  // 짐작 못 하는 오류는 원문을 그대로 보여준다.
+  assert.strictEqual(explainStartFailure(new Error('알 수 없는 실패')), '알 수 없는 실패');
+});
+
 test('같은 키에 두 개가 걸리면 충돌로 잡아낸다', () => {
   const hits = findCollisions([
     { hotkey: makeHotkey({ keycode: KEY.PgUp }), label: '버프: 이프리트' },

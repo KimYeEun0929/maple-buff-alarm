@@ -49,7 +49,7 @@ class HotkeyHook extends EventEmitter {
       this.error = null;
     } catch (err) {
       this.status = 'error';
-      this.error = err.message;
+      this.error = explainStartFailure(err);
     }
     return this.state();
   }
@@ -74,8 +74,12 @@ class HotkeyHook extends EventEmitter {
 
   /** 다음에 눌리는 키 하나를 그대로 돌려준다. Esc 를 누르면 취소. */
   capture() {
+    if (this.status === 'error') {
+      // 후킹이 실패한 상태에서 "켜세요"라고만 하면 이미 켠 사용자는 막힌다. 진짜 원인을 보여준다.
+      return Promise.reject(new Error(`키 후킹이 동작하지 않아 등록할 수 없습니다.\n\n${this.error}`));
+    }
     if (this.status !== 'running') {
-      return Promise.reject(new Error('키 후킹이 켜져 있어야 단축키를 등록할 수 있습니다.'));
+      return Promise.reject(new Error('키 후킹을 먼저 켜야 단축키를 등록할 수 있습니다. (설정 탭)'));
     }
     this.cancelCapture();
     return new Promise((resolve) => {
@@ -123,4 +127,31 @@ class HotkeyHook extends EventEmitter {
   }
 }
 
+/**
+ * 후킹 실패 원인을 사용자가 조치할 수 있는 문장으로 바꾼다.
+ * 날것의 "Cannot find module ..." 은 무엇을 해야 하는지 알려주지 않는다.
+ */
+function explainStartFailure(err) {
+  const message = err && err.message ? err.message : String(err);
+
+  if (err && err.code === 'MODULE_NOT_FOUND' && message.includes('uiohook-napi')) {
+    return (
+      '키 후킹 모듈(uiohook-napi)이 설치되어 있지 않습니다.\n' +
+      '프로젝트 폴더에서 npm install 을 실행한 뒤 앱을 다시 켜세요.'
+    );
+  }
+
+  // 패키지는 있는데 그 안의 네이티브 바이너리를 못 찾는 경우.
+  if (/No native build|bindings|\.node/i.test(message)) {
+    return (
+      '키 후킹 모듈의 네이티브 파일을 불러오지 못했습니다.\n' +
+      'node_modules 폴더를 지우고 npm install 을 다시 실행해 보세요.\n\n' +
+      `원본 오류: ${message}`
+    );
+  }
+
+  return message;
+}
+
 module.exports = HotkeyHook;
+module.exports.explainStartFailure = explainStartFailure;

@@ -186,9 +186,18 @@ async function run() {
     store.setSettings({ minAlertGapSec: 5 });
   });
 
-  await check('후킹이 꺼져 있으면 단축키 캡처는 이유를 붙여 거절한다', async () => {
+  await check('후킹이 꺼져 있으면 단축키 캡처는 켜라고 안내한다', async () => {
     const h = new HotkeyHook();
-    await assert.rejects(() => h.capture(), /키 후킹이 켜져 있어야/);
+    await assert.rejects(() => h.capture(), /먼저 켜야/);
+  });
+
+  await check('후킹이 실패한 상태면 캡처 거절에 진짜 원인이 실린다', async () => {
+    const h = new HotkeyHook();
+    h.status = 'error';
+    h.error = '키 후킹 모듈(uiohook-napi)이 설치되어 있지 않습니다.\nnpm install 을 실행하세요.';
+
+    // "켜세요"라고만 하면 이미 켠 사용자는 무엇이 문제인지 알 수 없다.
+    await assert.rejects(() => h.capture(), /npm install/);
   });
 
   await check('등록된 키가 눌리면 무엇을 해야 하는지 알려준다', () => {
